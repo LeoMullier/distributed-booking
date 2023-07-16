@@ -1,0 +1,407 @@
+<html>
+
+<head>
+    <title>💶 UT€ 💶</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            text-align: center;
+            background-color: white;
+            color: black;
+        }
+        h1 {
+            text-align: center;
+            color: #0B2447;
+            margin-bottom: 0px;
+        }
+        h6 {
+            text-align: center;
+            color: #0B2447;
+            padding: 0px;
+            margin: 0px;
+        }
+        h2 {
+            color: #19376D
+        }
+        h3 {
+            color: #576CBC
+        }
+        .place_init {
+            font-size: 40px;
+            font-weight: bold;
+            color: darkgrey
+        }
+
+        .place_libre {
+            font-size: 40px;
+            font-weight: bold;
+            color: green
+        }
+
+        .place_occupee {
+            font-size: 40px;
+            font-weight: bold;
+            color: red
+        }
+
+        .indice {
+            font-size: 10px;
+            color: lightblue
+        }
+        table{
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <form>
+        <br>
+        <hr>
+        <h1>
+            <b>💶 UT€ 💶</b>
+            <br />Réservez vos places en ligne !
+        </h1>
+        <h6>en mode réparti héhé</h6>
+        <hr>
+
+        <br>
+        <br>
+
+        <hr>
+        <h2>
+            Gérer mes places
+        </h2>
+        
+        <label for="p">Saisie des places (séparées par une virgule)</label>
+        <br>
+        <input type="text" style="width:250px;" name="p" id="p"placeholder="1, 2, 3" >
+        
+        <br>
+        <br>
+        <label for="t">Action souhaitée</label>
+        <br>
+        <select name="t" id="t" style="width:250px;">
+            <option value="demandeReservation">Réserver les places saisies</option>
+            <option value="demandeLiberation">Libérer les places saisies</option>
+        </select>
+        
+        <br>
+        <br>
+        <input type="button" style="width:250px;" id="envoyerMessagePlaces" value="Valider" />
+
+        <br>
+        <br>
+        <hr>
+
+        <br>
+        <br>
+
+        <hr>
+        <h2>
+            Visualiser les places actuellement disponibles
+        </h2>
+        <h3>
+            Aperçu des 50 places de la salle
+        </h3>
+
+        <br />
+        <div id="salle"></div>
+
+        <br />
+        <h3>
+            Actions disponibles
+        </h3>
+        <label for="envoyerMessageEtat">Actualiser la liste des places disponibles</label>
+        <br>
+        <input type="hidden" id="etat" value="demandeEtatPlaces">
+        <input type="button" style="width:250px;" id="envoyerMessageEtat" value="Actualiser" />
+
+        <br>
+        <br>
+        <label for="nbPlacesParLigne">Modifier le nombre de places par rangées</label>
+        <br>
+        <input type="number" style="width:250px;" id="nbPlacesParLigne" name="nbPlacesParLigne" size="10" value="10">
+        <br>
+        <br>
+        <hr>
+
+        
+
+        <br>
+        <bR>
+
+        <hr>
+        <h2>
+            Aspects techniques
+        </h2>
+        <h3>
+            Personnaliser la connexion à la websocket
+        </h3>
+        <label for="host">Host demandé</label>
+        <br>
+        <input id="host" style="width:250px;" type="text" size="10" value="localhost">
+        <br>
+        <br>
+        <label for="port">Port demandé</label>
+        <br>
+        <input id="port" style="width:250px;" type="text" maxlength="5" size="5" value="0000">
+        <br>
+        <br>
+        <button style="width:125px;" id="connecter">Ouvrir</button>
+        <button style="width:125px;" id="fermer">Fermer</button>
+        <h3>
+            Sauvegarder le système
+        </h3>
+        <button style="width:250px;" id="envoyerMessageSauvegarde">Lancer la sauvegarde</button>
+
+        <h3>
+            Consulter la journalisation du client
+        </h3>
+        <div id="logs" style="padding: 10px; border: 2px solid #ACB1D6; font-family:Courier, monospace; text-align: left; max-height: 100vh;overflow-y: scroll;">
+
+        </div>
+        <br>
+        <hr>
+    </form>
+
+    <script>
+        // Créer une map pour stocker les résultats
+        function createMapFromString(str) {
+            //console.log ("str=" + str)
+
+            const map = new Map();
+            const pairs = str.split('~'); // On enlève le premier "=" et on divise la chaîne en paires
+
+            //console.log (pairs)
+
+            pairs.forEach(pair => {
+                const [key, value] = pair.substring(1,).split(str.substring(1, 2)); // On divise chaque paire en clé et valeur
+                console.log(key, value)
+                if (key.trim().length > 0) {
+                    map.set(key, value);
+                }
+            });
+
+            return map;
+        }
+
+        function genereTablePlaces(places, nbPlacesParLigne) {
+
+            if (nbPlacesParLigne > places.length) {
+                nbPlacesParLigne = Math.floor(places.length / 2)
+            }
+
+            const nbLignes = Math.floor(places.length / nbPlacesParLigne)
+            const reste = places.length % nbPlacesParLigne
+
+            console.log("nbPlacesParLignes:" + nbPlacesParLigne)
+            console.log("nbLignes:" + nbLignes)
+            console.log("reste:" + reste)
+
+            //"<H1>Liste des " + places.length + " places</H1>"
+            let html = "<table>"
+            let lig = 0
+            let col = 0
+            let i = 0
+            for (lig = 1; lig <= nbLignes; lig++) {
+                html = html + "<TR>"
+                for (col = 1; col <= nbPlacesParLigne; col++) {
+                    html = html + "<TD>"
+                    html = html + "<span class='place_init' id=place_" + i + ">" + "O" + "</span>"
+                    html = html + "<span class='indice'>" + i + "</span>"
+                    html = html + "</TD>"
+                    i++
+                }
+                html = html + "</TR>"
+            }
+            console.log("apres boucle 1, lig=" + lig)
+            console.log("apres boucle 2, col=" + col)
+            let debutCol = col
+            // on traite le reste
+            if (reste > 0) {
+                casevide = Math.floor((nbPlacesParLigne - reste) / 2)
+                console.log("casevide:" + casevide)
+                html = html + "<TR>"
+                for (col = 1; col <= casevide; col++) {
+                    html = html + "<TD>"
+                    html = html + "</TD>"
+                }
+                console.log("debutCol:" + debutCol)
+                for (col = 1; col <= reste; col++) {
+                    html = html + "<TD>"
+                    // on recalcule l'indice
+                    if (i <= places.length - 1) {
+                        html = html + "<span class='place_init' id=place_" + i + ">" + "O" + "</span>"
+                        html = html + "<span class='indice'>" + i + "</span>"
+                    }
+                    html = html + "</TD>"
+                    i++
+                }
+                // pas la peine de terminer la ligne
+                html = html + "</TR>"
+            }
+
+            html = html + "<table>"
+
+            return html;
+        }
+
+        function MajTablePlaces(places) {
+
+            for (i = 0; i < places.length; i++) {
+                caseId = "place_" + i
+                let html = ""
+                if (places[i] == 1) {
+                    document.getElementById(caseId).className = "place_occupee"
+                } else {
+                    document.getElementById(caseId).className = "place_libre"
+                }
+            }
+        }
+
+        window.onload = function(){
+            document.getElementById("port").value = location.port;
+        }
+
+        function addToLog(message) {
+            var logs = document.getElementById("logs");
+            var d = document.createElement("div");
+            d.textContent = message;
+            logs.appendChild(d);
+            logs.scroll(0, logs.scrollHeight);
+        }
+
+
+
+        document.getElementById("envoyerMessagePlaces").onclick = function (evt) {
+
+            //ws.send("=type=demandeReservation,=listeplaces=[1;12;3]\n")
+            ws.send(
+                "~=type=" + document.getElementById("t").value.toString() +
+                "~=listePlaces=[" + document.getElementById("p").value.toString() + "]\n"
+            );
+
+            addToLog("<--Envoi:" + ",=type=" + document.getElementById("t").value + ",=listeplaces=" + document.getElementById("p").value + ",=toApp=0" + "\n")
+
+            /*
+                            addToLog("=sender="+document.getElementById("s").value+
+                                    ",=hlg="+document.getElementById("h").value+
+                                    ",=type="+document.getElementById("t").value+
+                                    ",=places="+document.getElementById("p").value+"\n")
+                                    */
+
+            return false
+        }
+
+        function envoyerMessageEtat(evt) {
+
+            //ws.send("=type=demandeReservation,=listeplaces=[1;12;3]\n")
+            ws.send("~=type=" + document.getElementById("etat").value.toString() + "~=toApp=0" + "\n");  // tres important de mettre le champ place
+
+            addToLog("<--Envoi:" + ",=type=" + document.getElementById("etat").value + "\n")
+
+            /*
+            addToLog("=sender="+document.getElementById("s").value+
+                    ",=hlg="+document.getElementById("h").value+
+                    ",=type="+document.getElementById("t").value+
+                    ",=places="+document.getElementById("p").value+"\n")
+                    */
+
+            return false
+        }
+
+        document.getElementById("envoyerMessageEtat").onclick = envoyerMessageEtat;
+
+        document.getElementById("envoyerMessageSauvegarde").onclick = function (evt) {
+
+            ws.send("~=type=demandeSauvegarde~=toApp=1" + "\n");  // tres important de mettre le champ place
+
+            addToLog("<--Envoi:" + ",=type=" + document.getElementById("etat").value + "\n")
+
+            /*
+            addToLog("=sender="+document.getElementById("s").value+
+                    ",=hlg="+document.getElementById("h").value+
+                    ",=type="+document.getElementById("t").value+
+                    ",=places="+document.getElementById("p").value+"\n")
+                    */
+
+            return false
+        }
+
+
+        var ws;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            if (ws) {
+                return false;
+            }
+
+            var host = document.getElementById("host").value;
+            var port = location.port;
+
+            addToLog("Tentative de connexion")
+            addToLog("host = " + host + ", port = " + port)
+            ws = new WebSocket("ws://" + host + ":" + port + "/ws");
+
+            ws.onopen = function (evt) {
+                addToLog("Websocket ouverte");
+                ws.send("~=type=" + document.getElementById("etat").value.toString() + "~=toApp=0" + "\n");
+            }
+
+            ws.onclose = function (evt) {
+                addToLog("Websocket fermée");
+                ws = null;
+            }
+
+            ws.onmessage = function (evt) {
+                addToLog("-->Réception: " + evt.data);
+                // Récupérer les valeurs des champs du formulaire
+                const message = evt.data;
+                // Appeler la fonction splitStringToMap avec les valeurs des champs du formulaire
+                let desc_message = createMapFromString(message);
+
+                console.log(desc_message);
+
+                switch (desc_message.get("type")) {
+                    case "etatPlaces":
+                        console.log("desc_message[etatPlaces]=" + desc_message.get("etatPlaces"));
+                        // Fonction qui découpe etatPlace en tableau de caractères
+                        let places = desc_message.get("etatPlaces").split('').map(c => c.trim());
+                        // Afficher le résultat dans la console
+                        console.log(places);
+
+                        // générer des O vert ou rouge selon la valeur de places
+
+                        const nbPlacesParLigne = document.getElementById("nbPlacesParLigne").value
+
+                        document.getElementById("salle").innerHTML = genereTablePlaces(places, nbPlacesParLigne)
+
+                        MajTablePlaces(places)
+                        break;
+                    case "reservationOK":
+                        ws.send("~=type=" + document.getElementById("etat").value.toString() + "~=toApp=0" + "\n");
+                        break;
+                    case "liberationOK":
+                        ws.send("~=type=" + document.getElementById("etat").value.toString() + "~=toApp=0" + "\n");
+                        break;
+                    default:
+                        console.log("Type de message non compris")
+                        break;
+                }
+
+            }
+
+            ws.onerror = function (evt) {
+                addToLog("Erreur: " + evt.data);
+            }
+            return false;
+        })
+
+    </script>
+
+</body>
+
+</html>
